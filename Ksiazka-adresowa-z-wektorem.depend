@@ -6,3 +6,11 @@
 	<cstdlib>
 	<vector>
 
+1661711508 source:c:\users\adamz\onedrive\dokumenty\programy c++\ksiazka adresowa z wektorem\ksiazka-adresowa\main.cpp
+	<iostream>
+	<windows.h>
+	<fstream>
+	<cstdlib>
+	<vector>
+	<stdlib.h>
+

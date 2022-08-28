@@ -6,6 +6,11 @@
 
 using namespace std;
 
+struct User {
+    int id;
+    string login, password;
+};
+
 struct Person {
     int id;
     string name = "", surname = "", phoneNumber = "", email = "", address = "";
@@ -33,12 +38,54 @@ char loadSign() {
     return sign;
 }
 
+void loadUsersFromFile (vector<User> &users) {
+    string line;
+    User user;
+
+    ifstream file;
+    file.open("Uzytkownicy.txt");
+
+    if (file.good()){
+        while (getline(file,line)){
+            string login = "", password = "", buforId = "";
+            int lineLength = line.length(), typeOfData = 1;
+
+            for (int i = 0; i < lineLength; i++){
+                if (line[i] == '|') {
+                    typeOfData++;
+                }else if (line[i] != '|'){
+                    switch (typeOfData){
+                    case 1:
+                        buforId += line[i];
+                        break;
+                    case 2:
+                        login += line[i];
+                        break;
+                    case 3:
+                        password += line[i];
+                        break;
+                    }
+                }
+            }
+            user.id = atoi(buforId.c_str());
+            user.login = login;
+            user.password = password;
+
+            users.push_back(user);
+        }
+        file.close();
+
+    } else {
+        cout << "Wczytanie uzytkownikow z pliku zakonczone niepowodzeniem!" << endl;
+    }
+}
+
 void loadPersonsFromFile(vector<Person> &persons) {
     string line;
     Person person;
 
     ifstream file;
-    file.open("Ksiazka adresowa.txt");
+    file.open("Adresaci.txt");
 
     if (file.good()) {
         while (getline(file,line)) {
@@ -84,11 +131,110 @@ void loadPersonsFromFile(vector<Person> &persons) {
         }
         file.close ();
     } else {
-        cout << "Wczytanie danych z pliku zakonczone niepowodzeniem!" << endl;
+        cout << "Wczytanie adresatow z pliku zakonczone niepowodzeniem!" << endl;
     }
 }
 
-void addPerson(vector<Person> &persons) {
+void saveUserToTxtFile(User user){
+    ofstream file;
+    file.open("Uzytkownicy.txt", ios::app);
+
+    if (file.good()) {
+        file << user.id << "|";
+        file << user.login << "|";
+        file << user.password << "|" << endl;
+        file.close();
+    } else {
+        cout << "Rejestracja uzytkownika zakonczona niepowodzeniem!" << endl << endl;
+    }
+    cout << endl << "Rejestracja uzytkownika zakonczona powodzeniem!" << endl << endl;
+}
+
+void userRegistration(vector<User> &users){
+    string login, password;
+    int numberOfUsers = users.size();
+    int i = 0, id;
+    User user;
+
+    cout << "Podaj nazwe uzytkownika: ";
+    login = loadLine();
+
+    while (i < numberOfUsers){
+        if (users[i].login == login){
+            cout << endl << "Podana nazwa uzytkownika jest juz zajeta! Podaj inna nazwe uzytkownika: ";
+            login = loadLine();
+            i = 0;
+        } else {
+            i++;
+        }
+    }
+    cout << "Podaj haslo: ";
+    password = loadLine();
+
+    if (numberOfUsers == 0) {
+        id = 1;
+    } else {
+        id = users[numberOfUsers - 1].id + 1;
+    }
+
+    user.login = login;
+    user.password = password;
+    user.id = id;
+
+    users.push_back(user);
+
+    saveUserToTxtFile(user);
+}
+
+int userLogin(vector<User> users){
+   string login, password;
+   int i = 0, numberOfPersons = users.size();
+
+   cout << "Podaj nazwe uzytkownika: ";
+   login = loadLine();
+
+   while (i < numberOfPersons){
+        if (users[i].login == login){
+            for (int attempts = 0; attempts < 3; attempts++){
+                cout << endl << "Podaj haslo (Pozostalo prob " << 3 - attempts << "): ";
+                password = loadLine();
+                if (users[i].password == password){
+                    cout << endl << "Uzytkownik zostal zalogowany!" << endl << endl;
+                    system("pause");
+                    return users[i].id;
+                }
+            }
+            cout << endl << "Podales 3 razy bledne haslo! Sprobuj ponownie za 3 sekundy." << endl;
+            Sleep(3000);
+        }
+        else {
+            i++;
+        }
+    }
+    cout << "Uzytkownik o podanym loginie nie istnieje!" << endl;
+    system("pause");
+    return 0;
+}
+
+void savePersonToTxtFile(Person person, int loggedInUser){
+    ofstream file;
+    file.open("Adresaci.txt", ios::app);
+
+    if (file.good()) {
+        file << person.id << "|";
+        file << person.name << "|";
+        file << person.surname << "|";
+        file << person.phoneNumber << "|";
+        file << person.email << "|";
+        file << person.address << "|" << endl;
+        file.close();
+    } else {
+        cout << "Zapis danych zakonczony niepowodzeniem!" << endl << endl;
+    }
+    cout << endl << "Zapis danych zakonczony powodzeniem!" << endl << endl;
+}
+
+void addPerson(vector<Person> &persons, int loggedInUser) {
     Person person;
     int id, vectorLength = persons.size();
     string name, surname, phoneNumber, email, address;
@@ -118,21 +264,7 @@ void addPerson(vector<Person> &persons) {
 
     persons.push_back(person);
 
-    ofstream file;
-    file.open("Ksiazka adresowa.txt", ios::app);
-
-    if (file.good() == true) {
-        file << person.id << "|";
-        file << person.name << "|";
-        file << person.surname << "|";
-        file << person.phoneNumber << "|";
-        file << person.email << "|";
-        file << person.address << "|" << endl;
-        file.close();
-    } else {
-        cout << "Zapis danych zakonczony niepowodzeniem!" << endl << endl;
-    }
-    cout << endl << "Zapis danych zakonczony powodzeniem!" << endl << endl;
+    savePersonToTxtFile(person, loggedInUser);
 }
 
 void searchByName(vector<Person> persons) {
@@ -357,7 +489,8 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit) {
     choice = loadSign();
     cout << endl;
 
-    if (choice == '1') {
+    switch (choice) {
+    case '1':
         for (int i = 0; i < vectorLength; i++) {
             if (persons[i].id == idToEdit) {
                 cout << "Stare dane: " << persons[i].name << endl;
@@ -373,8 +506,8 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit) {
         changeDataInTxtFile(dataToChange, idToEdit);
         cout << endl << "Edycja danych zakonczona powodzeniem!" << endl << endl;
         system("pause");
-
-    } else if (choice == '2') {
+        break;
+    case '2':
         for (int i = 0; i < vectorLength; i++) {
             if (persons[i].id == idToEdit) {
                 cout << "Stare dane: " << persons[i].surname << endl;
@@ -391,8 +524,8 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit) {
 
         cout << endl << "Edycja danych zakonczona powodzeniem!" << endl << endl;
         system("pause");
-
-    } else if (choice == '3') {
+        break;
+    case '3':
         for (int i = 0; i < vectorLength; i++) {
             if (persons[i].id == idToEdit) {
                 cout << "Stare dane: " << persons[i].phoneNumber << endl;
@@ -409,8 +542,8 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit) {
 
         cout << endl << "Edycja danych zakonczona powodzeniem!" << endl << endl;
         system("pause");
-
-    } else if (choice == '4') {
+        break;
+    case '4':
         for (int i = 0; i < vectorLength; i++) {
             if (persons[i].id == idToEdit) {
                 cout << "Stare dane: " << persons[i].email << endl;
@@ -427,8 +560,8 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit) {
 
         cout << endl << "Edycja danych zakonczona powodzeniem!" << endl << endl;
         system("pause");
-
-    } else if (choice == '5') {
+        break;
+    case '5':
         for (int i = 0; i < vectorLength; i++) {
             if (persons[i].id == idToEdit) {
                 cout << "Stare dane: " << persons[i].address << endl;
@@ -445,12 +578,13 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit) {
 
         cout << endl << "Edycja danych zakonczona powodzeniem!" << endl << endl;
         system("pause");
-
-    } else if (choice == '6') {
-
-    } else {
+        break;
+    case '6':
+        break;
+    default:
         cout << "Musisz wybrac cyfre!" << endl;
         Sleep(1500);
+        break;
     }
 }
 
@@ -500,49 +634,168 @@ void editPersonData(vector<Person> &persons) {
     }
 }
 
+void changeUserPasswordInTxtFile(int loggedInUser, vector<string> dataToChange){
+    string oldData = dataToChange[0], newData = dataToChange[1];
+    int oldDataLength = oldData.length();
+    string line = "", idFromLine = "";
+    int idFromLineInt = 0;
+
+    ifstream file;
+    file.open("Uzytkownicy.txt");
+    ofstream temp;
+    temp.open("Przejsciowy plik uzytkownicy.txt");
+
+    if (file.good()) {
+        while (getline(file,line)) {
+            int lineLength = line.length();
+            for (int i = 0; i < lineLength; i++) {
+                if (line[i] != '|') {
+                    idFromLine += line[i];
+                } else {
+                    break;
+                }
+            }
+            idFromLineInt = atoi(idFromLine.c_str());
+
+            if (idFromLineInt == loggedInUser) {
+                line.replace(line.find(oldData), oldDataLength, newData);
+                temp << line << endl;
+            } else {
+                temp << line << endl;
+            }
+            idFromLineInt = 0;
+            idFromLine = "";
+        }
+        temp.close();
+        file.close();
+
+        remove("Uzytkownicy.txt");
+        rename("Przejsciowy plik uzytkownicy.txt", "Uzytkownicy.txt");
+
+        cout << endl << "Zmiana hasla zakonczona powodzeniem!" << endl << endl;
+    } else {
+        cout << endl << "Zmiana hasla zakonczona niepowodzeniem!" << endl << endl;
+    }
+}
+
+void editUserPassword(vector<User> &users, int &loggedInUser) {
+    string newPassword, oldPassword;
+    vector<string> dataToChange;
+
+    cout << "Podaj stare haslo: ";
+    oldPassword = loadLine();
+
+        if (users[loggedInUser - 1].password == oldPassword){
+            cout << endl << "Podaj nowe haslo: ";
+            newPassword = loadLine();
+
+            users[loggedInUser - 1].password = newPassword;
+
+            dataToChange.push_back(oldPassword);
+            dataToChange.push_back(newPassword);
+
+            changeUserPasswordInTxtFile(loggedInUser, dataToChange);
+        } else {
+        cout << endl<< "Podales bledne haslo uzytkownika! Uzytkownik zostal wylogowany!" << endl << endl;
+        loggedInUser = 0;
+        }
+}
+
+int logOut(){
+    cout << "Uzytkownik zostal wylogowany!" << endl << endl;
+    return 0;
+}
+
 int main() {
     char choice;
     vector<Person> persons;
+    vector<User> users;
+    int loggedInUser = 0, wrongPassword = 0;
 
+    loadUsersFromFile(users);
     loadPersonsFromFile(persons);
 
     while (true) {
-        system ("cls");
-        cout << "  |Menu programu|" << endl << endl;
-        cout << "1. Dodaj adresata" << endl;
-        cout << "2. Wyszukaj po imieniu" << endl;
-        cout << "3. Wyszukaj po nazwisku" << endl;
-        cout << "4. Wyswietl wszystkich adresatow" << endl;
-        cout << "5. Usun adresata" << endl;
-        cout << "6. Edytuj dane adresata" << endl;
-        cout << "9. Zakoncz program" << endl;
-        cout << endl << "Twoj wybor: ";
-        choice = loadSign();
-        cout << endl;
+        if (loggedInUser == 0) {
+            system ("cls");
+            cout << "  |Menu glowne|" << endl << endl;
+            cout << "1. Rejestracja" << endl;
+            cout << "2. Logowanie" << endl;
+            cout << "3. Zakoncz program" << endl;
+            cout << endl << "Twoj wybor: ";
+            choice = loadSign();
+            cout << endl;
 
-        if (choice == '1') {
-            addPerson(persons);
-            system("pause");
-        } else if (choice == '2') {
-            searchByName(persons);
-            system("pause");
-        } else if (choice == '3') {
-            searchBySurname(persons);
-            system("pause");
-        } else if (choice == '4') {
-            viewAllPersons(persons);
-            system("pause");
-        } else if (choice == '5') {
-            removePersonData(persons);
-            system("pause");
-        } else if (choice == '6') {
-            editPersonData(persons);
-        } else if (choice == '9') {
-            cout << "Do zobaczenia!" << endl;
-            exit(0);
+            switch (choice) {
+            case '1':
+                userRegistration(users);
+                system("pause");
+                break;
+            case '2':
+                loggedInUser = userLogin(users);
+                break;
+            case '3':
+                cout << "Do zobaczenia!" << endl;
+                exit(0);
+            default:
+                cout << "Musisz wpisac cyfre!" << endl << endl;
+                Sleep(1500);
+                break;
+            }
+
         } else {
-            cout << "Musisz wpisac cyfre!" << endl << endl;
-            Sleep(1500);
+            system ("cls");
+            cout << "  |Menu uzytkownika|" << endl << endl;
+            cout << "1. Dodaj adresata" << endl;
+            cout << "2. Wyszukaj po imieniu" << endl;
+            cout << "3. Wyszukaj po nazwisku" << endl;
+            cout << "4. Wyswietl wszystkich adresatow" << endl;
+            cout << "5. Usun adresata" << endl;
+            cout << "6. Edytuj dane adresata" << endl;
+            cout << "------------------------" << endl;
+            cout << "7. Zmien haslo" << endl;
+            cout << "9. Wyloguj sie" << endl;
+            cout << endl << "Twoj wybor: ";
+            choice = loadSign();
+            cout << endl;
+
+            switch (choice) {
+            case '1':
+                addPerson(persons, loggedInUser);
+                system("pause");
+                break;
+            case '2':
+                searchByName(persons);
+                system("pause");
+                break;
+            case '3':
+                searchBySurname(persons);
+                system("pause");
+                break;
+            case '4':
+                viewAllPersons(persons);
+                system("pause");
+                break;
+            case '5':
+                removePersonData(persons);
+                system("pause");
+                break;
+            case '6':
+                editPersonData(persons);
+                break;
+            case '7':
+                editUserPassword(users, loggedInUser);
+                system("pause");
+                break;
+            case '9':
+                loggedInUser = logOut();
+                system("pause");
+                break;
+            default:
+                cout << "Musisz wpisac cyfre!" << endl << endl;
+                Sleep(1000);
+                break;
+            }
         }
     }
     return 0;
