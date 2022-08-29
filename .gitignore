@@ -33,3 +33,8 @@
 
 # Txt files
 *.txt
+
+# Unnecessary files
+Ksiazka-adresowa-z-wektorem.cbp
+Ksiazka-adresowa-z-wektorem.depend
+Ksiazka-adresowa-z-wektorem.layout
