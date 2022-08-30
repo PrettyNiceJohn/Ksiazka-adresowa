@@ -80,7 +80,8 @@ void loadUsersFromFile (vector<User> &users) {
     }
 }
 
-void loadPersonsFromFile(vector<Person> &persons, int loggedInUser) {
+int loadPersonsFromFile(vector<Person> &persons, int loggedInUser) {
+    int id = 0;
     string line;
     Person person;
 
@@ -130,14 +131,19 @@ void loadPersonsFromFile(vector<Person> &persons, int loggedInUser) {
             person.email = email;
             person.address = address;
 
-            if (person.whichUser == loggedInUser){
+            if (person.whichUser == loggedInUser) {
                 persons.push_back(person);
             }
+            id++;
         }
-        file.close ();
+        file.close();
     } else {
-        cout << "Wczytanie adresatow z pliku zakonczone niepowodzeniem!" << endl;
+        cout << "Wczytanie adresatow z pliku zakonczone niepowodzeniem!" << endl << endl;
     }
+    if (id > 0) {
+        id = person.id;
+    }
+    return id;
 }
 
 void saveUserToTxtFile(User user) {
@@ -161,6 +167,8 @@ void userRegistration(vector<User> &users) {
     int i = 0, id;
     User user;
 
+    system("cls");
+    cout << "    |Rejestracja|" << endl << endl;
     cout << "Podaj nazwe uzytkownika: ";
     login = loadLine();
 
@@ -181,7 +189,6 @@ void userRegistration(vector<User> &users) {
     } else {
         id = users[numberOfUsers - 1].id + 1;
     }
-
     user.login = login;
     user.password = password;
     user.id = id;
@@ -195,6 +202,8 @@ int userLogin(vector<User> users) {
     string login, password;
     int i = 0, numberOfPersons = users.size();
 
+    system("cls");
+    cout << "    |Logowanie|" << endl << endl;
     cout << "Podaj nazwe uzytkownika: ";
     login = loadLine();
 
@@ -203,6 +212,7 @@ int userLogin(vector<User> users) {
             for (int attempts = 0; attempts < 3; attempts++) {
                 cout << "Podaj haslo (Pozostalo prob " << 3 - attempts << "): ";
                 password = loadLine();
+
                 if (users[i].password == password) {
                     cout << endl << "Uzytkownik zostal zalogowany!" << endl << endl;
                     system("pause");
@@ -239,16 +249,21 @@ void savePersonToTxtFile(Person person) {
     cout << endl << "Zapis danych zakonczony powodzeniem!" << endl << endl;
 }
 
-void addPerson(vector<Person> &persons, int loggedInUser) {
+int addPerson(vector<Person> &persons, int loggedInUser, int highestId, int lastDeletedId) {
     Person person;
-    int id, vectorLength = persons.size();
+    int id;
     string name, surname, phoneNumber, email, address;
 
-    if (vectorLength == 0) {
+    if (highestId == 0) {
         id = 1;
+    } else if (highestId <= lastDeletedId) {
+        id = lastDeletedId + 1;
     } else {
-        id = persons[vectorLength - 1].id + 1;
+        id = highestId + 1;
     }
+
+    system("cls");
+    cout << "  |Dodaj adresata|" << endl << endl;
     cout << "Podaj imie: ";
     name = loadLine();
     cout << "Podaj nazwisko: ";
@@ -271,12 +286,19 @@ void addPerson(vector<Person> &persons, int loggedInUser) {
     persons.push_back(person);
 
     savePersonToTxtFile(person);
+
+    highestId = person.id;
+
+    return highestId;
 }
 
 void searchByName(vector<Person> persons) {
     int vectorLength = persons.size();
     int noMatch = 0;
     string name;
+
+    system("cls");
+    cout << "  |Wyszukaj po imieniu|" << endl << endl;
 
     if (vectorLength == 0) {
         cout << "Ksiazka adresowa jest pusta!" << endl << endl;
@@ -309,6 +331,9 @@ void searchBySurname(vector<Person> persons) {
     int noMatch = 0;
     string surname;
 
+    system("cls");
+    cout << "  |Wyszukaj po nazwisku|" << endl << endl;
+
     if (vectorLength == 0) {
         cout << "Ksiazka adresowa jest pusta!" << endl << endl;
     } else {
@@ -338,24 +363,27 @@ void searchBySurname(vector<Person> persons) {
 void viewAllPersons(vector<Person> persons) {
     int vectorLength = persons.size();
 
+    system("cls");
+    cout << "  |Wyswietl wszystkich adresatow|" << endl << endl;
+
     if (vectorLength == 0) {
         cout << "Ksiazka adresowa jest pusta!" << endl << endl;
     } else {
         for (int i = 0; i < vectorLength; i++) {
-                cout << "ID:               " << persons[i].id << endl;
-                cout << "Imie:             " << persons[i].name << endl;
-                cout << "Nazwisko:         " << persons[i].surname << endl;
-                cout << "Numer telefonu:   " << persons[i].phoneNumber << endl;
-                cout << "Email:            " << persons[i].email << endl;
-                cout << "Adres:            " << persons[i].address << endl;
-                cout << endl;
+            cout << "ID:               " << persons[i].id << endl;
+            cout << "Imie:             " << persons[i].name << endl;
+            cout << "Nazwisko:         " << persons[i].surname << endl;
+            cout << "Numer telefonu:   " << persons[i].phoneNumber << endl;
+            cout << "Email:            " << persons[i].email << endl;
+            cout << "Adres:            " << persons[i].address << endl;
+            cout << endl;
         }
     }
 }
 
-void removePersonDataFromTxtFile(int idToRemove, int loggedInUser) {
-    string line = "", idFromLine = "", userIdFromLine = "";
-    int idFromLineInt = 0, userIdFromLineInt = 0;
+void removePersonDataFromTxtFile(int idToRemove) {
+    string line = "", idFromLine = "";
+    int idFromLineInt = 0;
 
     ifstream file;
     file.open("Adresaci.txt");
@@ -363,49 +391,42 @@ void removePersonDataFromTxtFile(int idToRemove, int loggedInUser) {
     ofstream temp;
     temp.open("Przejsciowy plik adresaci.txt");
 
-    while (getline(file,line)) {
-            int lineLength = line.length(), typeOfData = 1;
+    if (file.good()) {
+        while (getline(file,line)) {
+            int lineLength = line.length();
 
             for (int i = 0; i < lineLength; i++) {
-                if (line[i] == '|') {
-                    typeOfData++;
-                } else if (line[i] != '|') {
-                    switch (typeOfData) {
-                    case 1:
-                        idFromLine += line[i];
-                        break;
-                    case 2:
-                        userIdFromLine += line[i];
-                        break;
-                    }
-                    if (typeOfData > 2) {
-                        break;
-                    }
+                if (line[i] != '|') {
+                    idFromLine += line[i];
+                } else {
+                    break;
                 }
             }
-        idFromLineInt = atoi(idFromLine.c_str());
-        userIdFromLineInt = atoi(userIdFromLine.c_str());
+            idFromLineInt = atoi(idFromLine.c_str());
 
-        if (idFromLineInt == idToRemove && userIdFromLineInt == loggedInUser) {
-        } else {
-            temp << line << endl;
+            if (idFromLineInt != idToRemove) {
+                temp << line << endl;
+            }
+            idFromLineInt = 0;
+            idFromLine = "";
         }
-        idFromLineInt = 0;
-        idFromLine = "";
-        userIdFromLineInt = 0;
-        userIdFromLine = "";
-    }
-    temp.close();
-    file.close();
+        temp.close();
+        file.close();
 
-    remove("Adresaci.txt");
-    rename("Przejsciowy plik adresaci.txt", "Adresaci.txt");
+        remove("Adresaci.txt");
+        rename("Przejsciowy plik adresaci.txt", "Adresaci.txt");
+    } else {
+        cout << "Usuwanie danych z pliku zakonczone niepowodzeniem!" << endl << endl;
+    }
 }
 
-void removePersonData(vector<Person> &persons, int loggedInUser) {
+int removePersonData(vector<Person> &persons) {
     int idToRemove, noMatch = 0, vectorLength = persons.size();
     string idStr;
     char sign;
+
+    system("cls");
+    cout << "       |Usun adresata|" << endl << endl;
 
     if (vectorLength == 0) {
         cout << "Ksiazka adresowa jest pusta!" << endl << endl;
@@ -432,7 +453,7 @@ void removePersonData(vector<Person> &persons, int loggedInUser) {
                     auto iterator = persons.begin() + i;
                     persons.erase(iterator);
 
-                    removePersonDataFromTxtFile(idToRemove, loggedInUser);
+                    removePersonDataFromTxtFile(idToRemove);
 
                     cout << endl << "Usuwanie danych zakonczone powodzeniem!" << endl << endl;
                     break;
@@ -451,13 +472,13 @@ void removePersonData(vector<Person> &persons, int loggedInUser) {
             cout << "Ksiazka adresowa jest teraz pusta!" << endl << endl;
         }
     }
+    return idToRemove;
 }
 
-void changeDataInTxtFile(vector<string> dataToChange, int idToEdit, int loggedInUser) {
+void changeDataInTxtFile(vector<string> dataToChange, int idToEdit) {
     string oldData = dataToChange[0], newData = dataToChange[1];
-    int oldDataLength = oldData.length();
-    string line = "", idFromLine = "", userIdFromLine = "";
-    int idFromLineInt = 0, userIdFromLineInt = 0;
+    int oldDataLength = oldData.length(), idFromLineInt = 0;
+    string line = "", idFromLine = "";
 
     ifstream file;
     file.open("Adresaci.txt");
@@ -465,29 +486,18 @@ void changeDataInTxtFile(vector<string> dataToChange, int idToEdit, int loggedIn
     temp.open("Przejsciowy plik adresaci.txt");
 
     while (getline(file,line)) {
-            int lineLength = line.length(), typeOfData = 1;
+        int lineLength = line.length();
 
-            for (int i = 0; i < lineLength; i++) {
-                if (line[i] == '|') {
-                    typeOfData++;
-                } else if (line[i] != '|') {
-                    switch (typeOfData) {
-                    case 1:
-                        idFromLine += line[i];
-                        break;
-                    case 2:
-                        userIdFromLine += line[i];
-                        break;
-                    }
-                    if (typeOfData > 2) {
-                        break;
-                    }
-                }
+        for (int i = 0; i < lineLength; i++) {
+            if (line[i] != '|') {
+                idFromLine += line[i];
+            } else {
+                break;
             }
+        }
         idFromLineInt = atoi(idFromLine.c_str());
-        userIdFromLineInt = atoi(userIdFromLine.c_str());
 
-        if (idFromLineInt == idToEdit && userIdFromLineInt == loggedInUser) {
+        if (idFromLineInt == idToEdit) {
             line.replace(line.find(oldData), oldDataLength, newData);
             temp << line << endl;
         } else {
@@ -495,8 +505,6 @@ void changeDataInTxtFile(vector<string> dataToChange, int idToEdit, int loggedIn
         }
         idFromLineInt = 0;
         idFromLine = "";
-        userIdFromLineInt = 0;
-        userIdFromLine = "";
     }
     temp.close();
     file.close();
@@ -505,13 +513,14 @@ void changeDataInTxtFile(vector<string> dataToChange, int idToEdit, int loggedIn
     rename("Przejsciowy plik adresaci.txt", "Adresaci.txt");
 }
 
-void selectDataToEdit(vector<Person> &persons, int idToEdit, int loggedInUser) {
+void selectDataToEdit(vector<Person> &persons, int idToEdit) {
     char choice;
     int vectorLength = persons.size();
     string name, surname, phoneNumber, email, address;
     vector<string> dataToChange;
 
     system ("cls");
+    cout << "  |Edytuj dana adresata|" << endl << endl;
     cout << "Wybierz dane do edycji: " << endl;
     cout << "1. Imie" << endl;
     cout << "2. Nazwisko" << endl;
@@ -525,10 +534,13 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit, int loggedInUser) {
 
     switch (choice) {
     case '1':
+        system("cls");
+        cout << "  |Imie|" << endl << endl;
+
         for (int i = 0; i < vectorLength; i++) {
-            if (persons[i].id == idToEdit && persons[i].whichUser == loggedInUser) {
-                cout << "Stare dane: " << persons[i].name << endl;
-                cout << "Nowe dane: ";
+            if (persons[i].id == idToEdit) {
+                cout << "Stare: " << persons[i].name << endl;
+                cout << "Nowe: ";
                 name = loadLine();
 
                 dataToChange.push_back(persons[i].name);
@@ -537,15 +549,18 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit, int loggedInUser) {
                 persons[i].name = name;
             }
         }
-        changeDataInTxtFile(dataToChange, idToEdit, loggedInUser);
+        changeDataInTxtFile(dataToChange, idToEdit);
         cout << endl << "Edycja danych zakonczona powodzeniem!" << endl << endl;
         system("pause");
         break;
     case '2':
+        system("cls");
+        cout << "  |Nazwisko|" << endl << endl;
+
         for (int i = 0; i < vectorLength; i++) {
-            if (persons[i].id == idToEdit && persons[i].whichUser == loggedInUser) {
-                cout << "Stare dane: " << persons[i].surname << endl;
-                cout << "Nowe dane: ";
+            if (persons[i].id == idToEdit) {
+                cout << "Stare: " << persons[i].surname << endl;
+                cout << "Nowe: ";
                 surname = loadLine();
 
                 dataToChange.push_back(persons[i].surname);
@@ -554,16 +569,19 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit, int loggedInUser) {
                 persons[i].surname = surname;
             }
         }
-        changeDataInTxtFile(dataToChange, idToEdit, loggedInUser);
+        changeDataInTxtFile(dataToChange, idToEdit);
 
         cout << endl << "Edycja danych zakonczona powodzeniem!" << endl << endl;
         system("pause");
         break;
     case '3':
+        system("cls");
+        cout << "  |Numer telefonu|" << endl << endl;
+
         for (int i = 0; i < vectorLength; i++) {
-            if (persons[i].id == idToEdit && persons[i].whichUser == loggedInUser) {
-                cout << "Stare dane: " << persons[i].phoneNumber << endl;
-                cout << "Nowe dane: ";
+            if (persons[i].id == idToEdit) {
+                cout << "Stary: " << persons[i].phoneNumber << endl;
+                cout << "Nowy: ";
                 phoneNumber = loadLine();
 
                 dataToChange.push_back(persons[i].phoneNumber);
@@ -572,16 +590,19 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit, int loggedInUser) {
                 persons[i].phoneNumber = phoneNumber;
             }
         }
-        changeDataInTxtFile(dataToChange, idToEdit, loggedInUser);
+        changeDataInTxtFile(dataToChange, idToEdit);
 
         cout << endl << "Edycja danych zakonczona powodzeniem!" << endl << endl;
         system("pause");
         break;
     case '4':
+        system("cls");
+        cout << "  |Email|" << endl << endl;
+
         for (int i = 0; i < vectorLength; i++) {
-            if (persons[i].id == idToEdit && persons[i].whichUser == loggedInUser) {
-                cout << "Stare dane: " << persons[i].email << endl;
-                cout << "Nowe dane: ";
+            if (persons[i].id == idToEdit) {
+                cout << "Stary: " << persons[i].email << endl;
+                cout << "Nowy: ";
                 email = loadLine();
 
                 dataToChange.push_back(persons[i].email);
@@ -590,16 +611,19 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit, int loggedInUser) {
                 persons[i].email = email;
             }
         }
-        changeDataInTxtFile(dataToChange, idToEdit, loggedInUser);
+        changeDataInTxtFile(dataToChange, idToEdit);
 
         cout << endl << "Edycja danych zakonczona powodzeniem!" << endl << endl;
         system("pause");
         break;
     case '5':
+        system("cls");
+        cout << "  |Adres|" << endl << endl;
+
         for (int i = 0; i < vectorLength; i++) {
-            if (persons[i].id == idToEdit && persons[i].whichUser == loggedInUser) {
-                cout << "Stare dane: " << persons[i].address << endl;
-                cout << "Nowe dane: ";
+            if (persons[i].id == idToEdit) {
+                cout << "Stary: " << persons[i].address << endl;
+                cout << "Nowy: ";
                 address = loadLine();
 
                 dataToChange.push_back(persons[i].address);
@@ -608,7 +632,7 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit, int loggedInUser) {
                 persons[i].address = address;
             }
         }
-        changeDataInTxtFile(dataToChange, idToEdit, loggedInUser);
+        changeDataInTxtFile(dataToChange, idToEdit);
 
         cout << endl << "Edycja danych zakonczona powodzeniem!" << endl << endl;
         system("pause");
@@ -622,10 +646,13 @@ void selectDataToEdit(vector<Person> &persons, int idToEdit, int loggedInUser) {
     }
 }
 
-void editPersonData(vector<Person> &persons, int loggedInUser) {
+void editPersonData(vector<Person> &persons) {
     string idStr;
     int idToEdit, noMatch = 0, vectorLength = persons.size();
     char sign;
+
+    system("cls");
+    cout << "        |Edytuj dane adresata|" << endl << endl;
 
     if (vectorLength == 0) {
         cout << "Ksiazka adresowa jest pusta!" << endl << endl;
@@ -636,7 +663,7 @@ void editPersonData(vector<Person> &persons, int loggedInUser) {
         idToEdit = atoi(idStr.c_str());
 
         for (int i = 0; i < vectorLength; i++) {
-            if (persons[i].id == idToEdit && persons[i].whichUser == loggedInUser) {
+            if (persons[i].id == idToEdit) {
                 cout << endl;
                 cout << "ID:               " << persons[i].id << endl;
                 cout << "Imie:             " << persons[i].name << endl;
@@ -649,7 +676,7 @@ void editPersonData(vector<Person> &persons, int loggedInUser) {
                 sign = loadSign();
 
                 if (sign == 't') {
-                    selectDataToEdit(persons, idToEdit, loggedInUser);
+                    selectDataToEdit(persons, idToEdit);
                     break;
                 } else if (sign == 'n') {
                     cout << endl << "Wstrzymano edycje danych!" << endl << endl;
@@ -717,6 +744,9 @@ void editUserPassword(vector<User> &users, int &loggedInUser) {
     string newPassword, oldPassword;
     vector<string> dataToChange;
 
+    system("cls");
+    cout << "   |Zmien haslo|" << endl << endl;
+
     cout << "Podaj aktualne haslo: ";
     oldPassword = loadLine();
 
@@ -737,7 +767,8 @@ void editUserPassword(vector<User> &users, int &loggedInUser) {
 }
 
 int logOut() {
-    cout << "Uzytkownik zostal wylogowany!" << endl << endl;
+    system("cls");
+    cout << endl << "Uzytkownik zostal wylogowany!" << endl << endl;
     return 0;
 }
 
@@ -746,6 +777,7 @@ int main() {
     vector<Person> persons;
     vector<User> users;
     int loggedInUser = 0;
+    int highestId = 0, lastDeletedId = 0;
 
     loadUsersFromFile(users);
 
@@ -767,17 +799,17 @@ int main() {
                 break;
             case '2':
                 loggedInUser = userLogin(users);
-                loadPersonsFromFile(persons, loggedInUser);
+                highestId = loadPersonsFromFile(persons, loggedInUser);
                 break;
             case '3':
-                cout << "Do zobaczenia!" << endl;
+                system("cls");
+                cout << endl << "Do zobaczenia!" << endl;
                 exit(0);
             default:
                 cout << "Musisz wpisac cyfre od 1 do 3!" << endl << endl;
                 Sleep(1500);
                 break;
             }
-
         } else {
             system ("cls");
             cout << "  |Menu uzytkownika|" << endl << endl;
@@ -796,7 +828,7 @@ int main() {
 
             switch (choice) {
             case '1':
-                addPerson(persons, loggedInUser);
+                highestId = addPerson(persons, loggedInUser, highestId, lastDeletedId);
                 system("pause");
                 break;
             case '2':
@@ -812,11 +844,11 @@ int main() {
                 system("pause");
                 break;
             case '5':
-                removePersonData(persons, loggedInUser);
+                lastDeletedId = removePersonData(persons);
                 system("pause");
                 break;
             case '6':
-                editPersonData(persons, loggedInUser);
+                editPersonData(persons);
                 break;
             case '7':
                 editUserPassword(users, loggedInUser);
