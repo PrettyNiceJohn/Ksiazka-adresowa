@@ -254,7 +254,7 @@ int addPerson(vector<Person> &persons, int loggedInUser, int highestId, int last
     int id;
     string name, surname, phoneNumber, email, address;
 
-    if (highestId == 0) {
+    if (highestId == 0 && lastDeletedId == 0) {
         id = 1;
     } else if (highestId <= lastDeletedId) {
         id = lastDeletedId + 1;
